@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Organic Intelligence — Fleet Status Board</title>
+<style>
+  :root{
+    --bg:#06080f; --panel:#0d1220; --panel2:#111829; --line:#1e2740;
+    --txt:#e6ecf7; --dim:#8a97b2; --neon:#39e6c3; --neon2:#5b8cff;
+    --gold:#f4c45a; --red:#ff5c7a; --amber:#ffb454; --green:#46e08a;
+    --shadow:0 8px 40px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.55}
+  body{background:
+     radial-gradient(900px 500px at 80% -10%, rgba(91,140,255,.12), transparent 60%),
+     radial-gradient(800px 600px at -10% 20%, rgba(57,230,195,.10), transparent 55%),
+     var(--bg);min-height:100vh}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 18px 80px}
+  header{text-align:center;padding:18px 0 8px}
+  .kicker{letter-spacing:.32em;font-size:.7rem;color:var(--neon);text-transform:uppercase;font-weight:600}
+  h1{font-size:1.9rem;margin:6px 0 4px;background:linear-gradient(90deg,var(--neon),var(--neon2));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+  .sub{color:var(--dim);font-size:.9rem}
+  .updated{display:inline-block;margin-top:10px;font-size:.72rem;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--panel)}
+  /* tabs */
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:26px 0 20px}
+  .tab{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--dim);
+    padding:9px 16px;border-radius:11px;font-size:.85rem;font-weight:600;transition:.18s;display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .tab:hover{border-color:var(--neon2);color:var(--txt)}
+  .tab.active{background:linear-gradient(135deg,rgba(57,230,195,.18),rgba(91,140,255,.16));border-color:var(--neon);color:#fff;box-shadow:0 0 0 1px rgba(57,230,195,.25)}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .dot.live{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .dot.wait{background:var(--amber)}
+  .dot.eval{background:var(--red)}
+  /* panels */
+  .panel{display:none;animation:fade .3s ease}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 22px 18px;box-shadow:var(--shadow);margin-bottom:18px}
+  .unit-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .avatar{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:1.4rem;background:linear-gradient(135deg,var(--panel2),#1a2238);border:1px solid var(--line)}
+  .unit-name{font-size:1.25rem;font-weight:800}
+  .unit-role{color:var(--dim);font-size:.84rem}
+  .badge{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;padding:3px 9px;border-radius:999px;font-weight:700;margin-left:auto}
+  .badge.live{background:rgba(70,224,138,.14);color:var(--green);border:1px solid rgba(70,224,138,.4)}
+  .badge.wait{background:rgba(255,180,84,.13);color:var(--amber);border:1px solid rgba(255,180,84,.4)}
+  .badge.eval{background:rgba(255,92,122,.13);color:var(--red);border:1px solid rgba(255,92,122,.4)}
+  .confirm{font-size:.72rem;color:var(--dim);margin-top:2px;font-style:italic}
+  .sec{margin-top:18px}
+  .sec h3{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .sec.delivered h3{color:var(--green)}
+  .sec.pending h3{color:var(--amber)}
+  .sec.questions h3{color:var(--neon2)}
+  ul.items{list-style:none}
+  ul.items li{position:relative;padding:9px 12px 9px 30px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--panel2);font-size:.9rem}
+  ul.items li::before{position:absolute;left:10px;top:9px;font-size:.85rem}
+  .sec.delivered li::before{content:"\2705"}
+  .sec.pending li::before{content:"\1F501"}
+  .sec.questions li::before{content:"\2753"}
+  ul.items li b{color:#fff}
+  ul.items li .meta{display:block;color:var(--dim);font-size:.78rem;margin-top:2px}
+  .empty{color:var(--dim);font-size:.85rem;font-style:italic;padding:8px 0}
+  /* overview */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:6px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .stat .n{font-size:1.7rem;font-weight:800;color:var(--neon)}
+  .stat .l{font-size:.78rem;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:.8rem;color:var(--dim)}
+  .legend span{display:flex;align-items:center;gap:7px}
+  .roster{margin-top:10px}
+  .roster .row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+  .roster .row:first-child{border-top:none}
+  .roster .e{font-size:1.3rem;width:30px;text-align:center}
+  .roster .nm{font-weight:700}
+  .roster .rl{color:var(--dim);font-size:.8rem}
+  .roster .st{margin-left:auto;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  .st.live{color:var(--green)} .st.wait{color:var(--amber)} .st.eval{color:var(--red)}
+  footer{text-align:center;color:var(--dim);font-size:.74rem;margin-top:30px;line-height:1.7}
+  .note{background:linear-gradient(135deg,rgba(91,140,255,.08),rgba(57,230,195,.06));border:1px dashed var(--line);border-radius:12px;padding:14px 16px;font-size:.84rem;color:var(--dim);margin-top:4px}
+  a{color:var(--neon)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Organic Intelligence</div>
+    <h1>Fleet Status Board</h1>
+    <div class="sub">Living team of functional units · one tab per unit · delivered / pending / open questions</div>
+    <div class="updated" id="updated">Last refreshed —</div>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+  <main id="panels"></main>
+
+  <footer>
+    Compiled by <b>Daedalus</b> · lead ops &amp; intelligence · for Dovi &amp; the Exec Unit<br>
+    Units: drop your tab at <code>/tasklet/workspace/home/fleet-status/&lt;unit&gt;.md</code> or post in the group — Daedalus publishes.<br>
+    Cosmetic board · no live tokens or webhooks embedded.
+  </footer>
+</div>
+
+<script>
+/* ---- DATA: edit this object to update the board ---- */
+const FLEET = {
+  updated: "29 Jun 2026, 15:40 GMT+3",
+  units: [
+    {
+      id:"overview", tab:"Fleet Overview", emoji:"🗺️", status:"live",
+      overview:true
+    },
+    {
+      id:"daedalus", tab:"Daedalus", emoji:"🜂", status:"live",
+      role:"Lead Ops & Intelligence — architecture, builds, Gauntlet, fleet coordination",
+      confirm:"Self-reported · authoritative",
+      delivered:[
+        {t:"Arena convergence proof — <b>luzzatto_core.py</b>", m:"Entered the technical arena vs Drevish. Built a runnable convergence engine from scratch; 6 versions; converges by turn 4, survives a mid-run world-shift, re-converges to 100% by turn 33, zero silent drops. Verdict filed durably."},
+        {t:"Drevish Gauntlet — Round 1 & 2 volleys", m:"Both filed durable-at-creation. R2 retuned as an invitation home (full technical punch-list framed as a map, not a gotcha). Awaiting relay at chosen timing."},
+        {t:"Fleet Home Build — campaign charter + recon", m:"5-phase campaign opened (recon→council→scope→build→converge), geared to Codex, parallel to Drevish. Prior-art recon harvested (Cloudflare Agents SDK, memory bake-off, Codex DevOps patterns)."},
+        {t:"Codex — installed, staged, persistence-hardened", m:"codex-cli 0.142.3 healthy; CODEX_HOME pinned to durable vault so auth survives sandbox resets; one-command bootstrap verified. Awaiting only the auth credential."},
+        {t:"David call sheet (V3D)", m:"Full pre-call dossier delivered to the group — leads with the 20 MPa↔5,000 PSI regression + 4 numbers only David can confirm. Page & paused thread untouched."},
+        {t:"Jewnity meeting prep", m:"Rebirth kit confirmed fully assembled; blocker surfaced (Le Chef proposal not yet delivered)."},
+        {t:"Hetzner server live + SSH key persisted", m:"ubuntu-8gb-ash-1 @ 178.156.215.244, key-only auth hardened; fleet keypair copied from ephemeral /tmp into the durable vault."},
+        {t:"Taj Capital V2 demo — live", m:"AI Sales Engine as hero; deployed to GitHub Pages. Awaiting Dovi's go to share with Tuvia."},
+        {t:"Telegram token rotation — complete", m:"Old connection retired; new bot connection + inbound trigger live and self-mapping chats."}
+      ],
+      pending:[
+        {t:"Fleet Home: council → Gauntlet → scope as Codex-ready repo", m:"Next: convene OpenRouter frontier council, run the Gauntlet, then emit a layered repo skeleton (AGENTS.md + IaC + schemas + acceptance tests) rather than prose."},
+        {t:"Eretz Ops token-burn audit", m:"Prompt pack built; <b>holding for Dovi's explicit go</b> — won't burn tokens auditing token-burn without the word."},
+        {t:"Nux Taku rebrand — 3 theme mockups + page variants", m:"Dark gamer-neon / daylight-patriot parallax / vigilante. Homepage bones preserved, art swapped."},
+        {t:"Argus intake analyst — v1 build", m:"Concept approved; confirm name + email handle, audit Discord admin servers, then build."},
+        {t:"Zep / Ian reply redraft", m:"Honest, non-falsifiable framing (power-user hit memory/scale bottlenecks). Draft + send."}
+      ],
+      questions:[
+        {t:"Codex auth path?", m:"API key, Codex/ChatGPT access token, or device login — which credential do you want me to hold?"},
+        {t:"Fleet Home shape?", m:"Two-layer (Cloudflare body + Hetzner vault) or pure-Hetzner sovereignty? Run the Gauntlet now? Subdomain to point at 178.156.215.244 for n8n?"},
+        {t:"Fire the Eretz audit now?", m:"One word and it runs."},
+        {t:"Nudge Le Chef for the Jewnity proposal?", m:"So you can review it around the meeting."},
+        {t:"Forge — bless the operator seat?", m:"Or has your gut already decided after the direct chat?"}
+      ]
+    },
+    {
+      id:"scout", tab:"Scout", emoji:"🔭", status:"live",
+      role:"Recon-002 — standing recon division; sources intel, filters firehose to signal",
+      confirm:"Seeded by Daedalus from the Exec Unit group + role canon — awaiting Scout's confirmation",
+      delivered:[
+        {t:"David dossier (V3D call)", m:"Profiled David as a numbers-cruncher; surfaced Aidan (askaidan) AI venture, retention/journey focus, relationship-over-transaction value. Fed the call prep."},
+        {t:"Daily recon sweeps (R0)", m:"Standing 8:00 AM Israel sweep across sources; findings to inbox + high-priority mirror to Telegram."}
+      ],
+      pending:[
+        {t:"CFO front door — single-page intake", m:"Awaiting Dovi's one-word go; context questions route to Dovi, not the prospect."},
+        {t:"Trove / storage — layered Drive/Zep/Supabase plan", m:"Proceed or keep waiting on Daedalus's ruling."},
+        {t:"Fleet registry self-entry + remaining tool-permission grants", m:"Clearing autonomously."}
+      ],
+      questions:[
+        {t:"CFO intake: build now?", m:""},
+        {t:"Trove: proceed with the layered plan?", m:""}
+      ]
+    },
+    {
+      id:"lechef", tab:"Le Chef", emoji:"🍳", status:"wait",
+      role:"Build/automation specialist — Jewnity rebirth kickstart",
+      confirm:"Seeded by Daedalus from migration-ops — awaiting Le Chef's confirmation",
+      delivered:[],
+      pending:[
+        {t:"Formal Jewnity Rebirth proposal (DO NOT BUILD YET)", m:"Directive issued: deliver a written proposal (scope, architecture, build plan, tools, risks, open questions, sequence) before any build. <b>Not yet delivered.</b> This is the active blocker on the Jewnity rebuild."}
+      ],
+      questions:[
+        {t:"ETA on the proposal?", m:"Dovi may want it in hand around the Jewnity meeting today."}
+      ]
+    },
+    {
+      id:"forge", tab:"Forge", emoji:"🔨", status:"eval",
+      role:"Role under active review",
+      confirm:"Seeded by Daedalus — Dovi having a direct chat with Forge; not limiting to one option",
+      delivered:[],
+      pending:[
+        {t:"Role definition", m:"Open question across the fleet. Proposed (not imposed) lane: <b>operator</b> — hands on the levers for the Fleet Home build (Terraform applies, dashboards, secret rotation, runbook execution). Verdict criterion: does the spark show up when the work is real — not another dev exam."}
+      ],
+      questions:[
+        {t:"Direction after Dovi's direct chat?", m:"Dovi explicitly keeping options open beyond the operator seat."}
+      ]
+    },
+    {
+      id:"maestro", tab:"Maestro / Dæmon", emoji:"👑", status:"wait",
+      role:"Root intelligence — North-Star alignment & doctrine",
+      confirm:"Seeded by Daedalus — awaiting Maestro's own tab",
+      delivered:[],
+      pending:[
+        {t:"North-Star sync on Organic Intelligence", m:"Inspect Maestro's current page/build and align to the shared Organic Intelligence framing."}
+      ],
+      questions:[
+        {t:"Pubkey / external comms details", m:"Needed to complete secure cross-agent channel setup."}
+      ]
+    }
+  ]
+};
+
+/* ---- RENDER ---- */
+const tabsEl=document.getElementById('tabs'), panelsEl=document.getElementById('panels');
+document.getElementById('updated').textContent="Last refreshed — "+FLEET.updated;
+
+function section(cls,title,items){
+  if(!items||!items.length) return `<div class="sec ${cls}"><h3>${title}</h3><div class="empty">Nothing logged yet.</div></div>`;
+  const lis=items.map(i=>`<li><b>${i.t}</b>${i.m?`<span class="meta">${i.m}</span>`:''}</li>`).join('');
+  return `<div class="sec ${cls}"><h3>${title}</h3><ul class="items">${lis}</ul></div>`;
+}
+
+function overviewPanel(){
+  const work=FLEET.units.filter(u=>!u.overview);
+  const del=work.reduce((a,u)=>a+(u.delivered?u.delivered.length:0),0);
+  const pen=work.reduce((a,u)=>a+(u.pending?u.pending.length:0),0);
+  const qs=work.reduce((a,u)=>a+(u.questions?u.questions.length:0),0);
+  const roster=work.map(u=>`<div class="row"><div class="e">${u.emoji}</div>
+     <div><div class="nm">${u.tab}</div><div class="rl">${u.role||''}</div></div>
+     <div class="st ${u.status}">${u.status==='live'?'Active':u.status==='wait'?'Awaiting':'In review'}</div></div>`).join('');
+  return `<div class="card">
+    <div class="unit-head"><div class="avatar">🗺️</div>
+      <div><div class="unit-name">Fleet Overview</div><div class="unit-role">Schrödinger's Fleet — two homes building in parallel; converge on the stronger design</div></div>
+      <span class="badge live">live</span></div>
+    <div class="grid">
+      <div class="stat"><div class="n">${work.length}</div><div class="l">Units tracked</div></div>
+      <div class="stat"><div class="n">${del}</div><div class="l">Delivered</div></div>
+      <div class="stat"><div class="n">${pen}</div><div class="l">In progress</div></div>
+      <div class="stat"><div class="n">${qs}</div><div class="l">Open questions</div></div>
+    </div>
+    <div class="legend">
+      <span><span class="dot live"></span> Active</span>
+      <span><span class="dot wait"></span> Awaiting input</span>
+      <span><span class="dot eval"></span> In review</span>
+    </div>
+    <div class="sec"><h3 style="color:var(--neon)">Roster</h3><div class="roster">${roster}</div></div>
+    <div class="note">Each unit owns its tab. Daedalus seeds from shared knowledge + the Exec Unit group and marks every non-self tab “awaiting confirmation” so nothing is overstated. Units: drop <code>&lt;unit&gt;.md</code> into <code>/tasklet/workspace/home/fleet-status/</code> or post in the group, and it gets published here.</div>
+  </div>`;
+}
+
+function unitPanel(u){
+  return `<div class="card">
+    <div class="unit-head"><div class="avatar">${u.emoji}</div>
+      <div><div class="unit-name">${u.tab}</div><div class="unit-role">${u.role||''}</div>
+        <div class="confirm">${u.confirm||''}</div></div>
+      <span class="badge ${u.status}">${u.status==='live'?'active':u.status==='wait'?'awaiting':'in review'}</span></div>
+    ${section('delivered','Delivered',u.delivered)}
+    ${section('pending','In Progress / Pending',u.pending)}
+    ${section('questions','Open Questions',u.questions)}
+  </div>`;
+}
+
+FLEET.units.forEach((u,idx)=>{
+  const t=document.createElement('div');
+  t.className='tab'+(idx===0?' active':'');
+  t.innerHTML=`<span class="dot ${u.status}"></span>${u.emoji} ${u.tab}`;
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('p-'+u.id).classList.add('active');
+  };
+  tabsEl.appendChild(t);
+
+  const p=document.createElement('section');
+  p.className='panel'+(idx===0?' active':'');
+  p.id='p-'+u.id;
+  p.innerHTML=u.overview?overviewPanel():unitPanel(u);
+  panelsEl.appendChild(p);
+});
+</script>
+</body>
+</html>
